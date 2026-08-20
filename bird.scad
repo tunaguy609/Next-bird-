@@ -1,107 +1,47 @@
 //
-// Next-bird parametric body (OpenSCAD)
+// Next-bird top view only (flat top)
 // Units: mm
 //
 
 $fn = 64;
 
-// =========================
-// Parameters (edit these)
-// =========================
-thickness = 24;          // overall body thickness (Z)
+// --- Given sketch lengths ---
+top_flat = 10;
+left_diag = 89;
+right_diag = 68;
+right_drop = 25;
+left_top_run = 71;
+right_top_run = 71;
+right_bottom_run = 90;
+long_diag = 140;
+bottom_flat = 24;
+left_vertical = 134;
 
-left_wing_len  = 71;     // from body shoulder to left tip
-right_wing_len = 71;     // from body shoulder to right tip
+// Tune these 3 angles to match your sketch visually (lengths stay exact)
+a_left_diag  = 228;  // from left top shelf toward top
+a_right_diag = 312;  // from top toward right shoulder
+a_long_diag  = 242;  // from right bottom shelf toward bottom center-left
 
-body_left_x  = -35;      // shoulder x (left side)
-body_right_x =  35;      // shoulder x (right side)
+function step(p, len, ang) = [p[0] + len*cos(ang), p[1] + len*sin(ang)];
 
-nose_len = 40;           // front center protrusion (from shoulder line to tip)
-rear_notch_depth = 10;   // rear inner notch depth
+// Build from top edge
+A = [0, 0];                 // top-left
+B = [top_flat, 0];          // top-right (flat top = 10mm)
 
-// fin
-fin_thickness = 8;
-fin_height    = 68;      // above body top
-fin_length    = 160;     // along X direction
-fin_round_r   = 22;      // roundness of fin top
+// Right side chain
+C = step(B, right_diag, a_right_diag);   // 68
+D = [C[0], C[1] - right_drop];           // 25 drop
+E = [D[0] + right_top_run, D[1]];        // 71 right
+F = [E[0] - right_bottom_run, E[1] - 70];// move down a bit then 90 shelf start (visual layout)
+G = [F[0] + right_bottom_run, F[1]];     // 90 right shelf
+H = step(F, long_diag, a_long_diag);     // 140 down-left
+I = [H[0] - bottom_flat, H[1]];          // 24 bottom flat
+J = [I[0], I[1] + left_vertical];        // 134 up
+K = [J[0] - left_top_run, J[1]];         // 71 left
+L = step(K, left_diag, a_left_diag);     // 89 back toward top
 
-// hole / eyelet pilot holes (optional)
-make_holes = true;
-eyelet_hole_d = 4.5;
-left_eyelet_pos  = [-62, -6, thickness/2];
-right_eyelet_pos = [ 62, -6, thickness/2];
-
-// =========================
-// 2D planform
-// =========================
-//
-// Y+ = "back", Y- = "front" (nose side)
-//
-module body_2d() {
-    polygon(points=[
-        // left wing tip (rear and front edges)
-        [body_left_x - left_wing_len,  12],
-        [body_left_x,                 12],
-
-        // transition to center/rear
-        [body_left_x + 8,             28],
-        [body_right_x - 8,            28],
-
-        // right rear shoulder and wing
-        [body_right_x,                12],
-        [body_right_x + right_wing_len, 12],
-        [body_right_x + right_wing_len, -12],
-        [body_right_x,               -12],
-
-        // slope toward nose
-        [16,                         -12],
-        [0,                          -(12 + nose_len)],
-        [-16,                        -12],
-
-        // back to left side
-        [body_left_x,                -12],
-        [body_left_x - left_wing_len, -12]
-    ]);
+module top_profile() {
+    polygon(points=[A,B,C,D,E,G,H,I,J,K,L]);
 }
 
-// =========================
-// Fin profile (2D in XZ, then extruded in Y)
-// =========================
-module fin_profile_2d() {
-    // Rounded "sail" style fin
-    hull() {
-        translate([-fin_length/2 + fin_round_r, 0]) circle(r=fin_round_r);
-        translate([ fin_length/2 - fin_round_r, 0]) circle(r=fin_round_r);
-        translate([0, fin_height]) circle(r=fin_round_r);
-    }
-}
-
-// =========================
-// Main model
-// =========================
-module next_bird() {
-    difference() {
-        union() {
-            // Base body
-            linear_extrude(height=thickness)
-                body_2d();
-
-            // Center fin (mounted on top centerline)
-            translate([0, 0, thickness])
-            rotate([90,0,0])  // extrude through Y
-            linear_extrude(height=fin_thickness, center=true)
-                fin_profile_2d();
-        }
-
-        // Optional eyelet pilot holes
-        if (make_holes) {
-            translate(left_eyelet_pos)
-                rotate([90,0,0]) cylinder(d=eyelet_hole_d, h=40, center=true);
-
-            translate(right_eyelet_pos)
-                rotate([90,0,0]) cylinder(d=eyelet_hole_d, h=40, center=true);
-        }
-    }
-}
-
-next_bird();
+color("deepskyblue") top_profile();
